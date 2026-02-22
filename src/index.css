@@ -1,0 +1,144 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+:root {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 700px at -10% -20%, rgba(125, 211, 252, 0.4), transparent 60%),
+    radial-gradient(1000px 580px at 110% 0%, rgba(129, 140, 248, 0.35), transparent 64%),
+    radial-gradient(900px 500px at 50% 115%, rgba(56, 189, 248, 0.3), transparent 68%),
+    linear-gradient(180deg, #edf3ff 0%, #f7f9ff 100%);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.glass-panel {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 1rem;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.48));
+  box-shadow:
+    0 24px 44px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.glass-soft {
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.56);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.glass-input {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: #1e293b;
+  outline: none;
+}
+
+.glass-input::placeholder {
+  color: #64748b;
+}
+
+.glass-input:focus {
+  border-color: rgba(59, 130, 246, 0.65);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+.glass-chip {
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 0.375rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.glass-chip:hover {
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.status-pill {
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.btn-primary {
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  border-radius: 0.8rem;
+  background: linear-gradient(120deg, #2563eb, #4f46e5);
+  padding: 0.56rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.24);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.29);
+}
+
+.btn-secondary {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.65);
+  padding: 0.48rem 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+  transition: background 160ms ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.btn-ghost {
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  background: transparent;
+  padding: 0.48rem 0.62rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  transition: background 160ms ease;
+}
+
+.btn-ghost:hover {
+  background: rgba(219, 234, 254, 0.65);
+}
+
+@keyframes slide-enter {
+  from {
+    opacity: 0.3;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-enter {
+  animation: slide-enter 220ms ease;
+}
