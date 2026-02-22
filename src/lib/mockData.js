@@ -13,33 +13,37 @@ Education: B.Tech in Computer Science.
 Location: Austin, TX. Available to start in 2 weeks.`
 
 export const MOCK_RESPONSE = {
-  score: 84,
-  recommendation: 'INTERVIEW',
-  summary:
-    'Candidate aligns well with core frontend requirements and has directly relevant recruiting-tool experience.',
-  strengths: [
-    'Strong React implementation background',
-    'Experience reducing recruiter workflow time with measurable impact',
-    'Clear alignment with location and availability requirements',
-  ],
-  gaps: [
-    'No explicit ATS integration ownership described',
-    'Accessibility depth is implied but not clearly demonstrated',
-  ],
-  interview_questions: [
-    'Walk us through a complex React workflow you shipped and tradeoffs you made.',
-    'How did you measure and improve screening funnel performance?',
-    'Describe your approach to accessibility in form-heavy interfaces.',
-  ],
-  recommended_action: 'Proceed to 45-minute technical + PM collaboration interview.',
-  email_draft:
-    'Hi Ananya,\n\nThanks for applying. We were impressed by your experience building recruiter workflows. We would like to invite you to a 45-minute interview this week.\n\nBest,\nSarah',
-  calendar_payload: {
-    candidate_name: 'Ananya Rao',
-    meeting_type: 'Technical + PM Interview',
-    duration_minutes: 45,
-    preferred_slots: ['2026-02-24T18:00:00Z', '2026-02-25T17:00:00Z'],
+  candidate_profile: {
+    fit_score: 76,
+    verdict: 'BORDERLINE',
+    strengths: [
+      'Experience with Angular and RxJS',
+      'Quantifiable impacts demonstrating efficiency improvements',
+      'Relevant educational background',
+    ],
+    gaps: [
+      'Less than 2 years of professional experience',
+      'No extensive project depth in a senior capacity',
+    ],
+    screening_decision: 'BORDERLINE',
   },
+  contact_links: [
+    {
+      url: 'https://github.com/tarush7',
+      category: 'GitHub',
+      context_clue: 'Link to the candidate code repositories.',
+    },
+    {
+      url: 'https://linkedin.com/in/tarush-kumar',
+      category: 'LinkedIn',
+      context_clue: 'Professional networking profile.',
+    },
+    {
+      url: 'kumartarush20@gmail.com',
+      category: 'Email',
+      context_clue: 'Contains an @ symbol and appears as contact email.',
+    },
+  ],
 }
 
 export const DEFAULT_CRITERIA = {

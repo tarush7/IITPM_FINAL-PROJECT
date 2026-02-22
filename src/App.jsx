@@ -1,46 +1,143 @@
 import { useState } from 'react'
-import Carousel from './components/Carousel'
 import InputPanel from './components/InputPanel'
 import OutputPanel from './components/OutputPanel'
 import TopBar from './components/TopBar'
 import { validateAnalysisResponse } from './lib/analysisUtils'
-import { DEFAULT_CRITERIA, MOCK_RESPONSE, SAMPLE_JD, SAMPLE_RESUME } from './lib/mockData'
+
+const DEBUG_LOGS = import.meta.env.VITE_ENABLE_DEBUG_LOGS === 'true'
+
+function logDebug(message, payload) {
+  if (!DEBUG_LOGS) {
+    return
+  }
+
+  if (payload === undefined) {
+    console.log(`[Recruit-AI] ${message}`)
+    return
+  }
+
+  console.log(`[Recruit-AI] ${message}`, payload)
+}
+
+function logError(message, payload) {
+  if (!DEBUG_LOGS) {
+    return
+  }
+
+  if (payload === undefined) {
+    console.error(`[Recruit-AI] ${message}`)
+    return
+  }
+
+  console.error(`[Recruit-AI] ${message}`, payload)
+}
+
+function buildResumeId(file) {
+  return `${file.name}-${file.size}-${file.lastModified}`
+}
+
+function createProcessTrail() {
+  return [
+    {
+      key: 'request',
+      label: 'Sending request to n8n webhook',
+      status: 'pending',
+      detail: '',
+    },
+    {
+      key: 'workflow',
+      label: 'n8n workflow executing (Extract PDF -> LLM -> URL parse)',
+      status: 'pending',
+      detail: '',
+    },
+    {
+      key: 'profile',
+      label: 'Validating candidate profile payload',
+      status: 'pending',
+      detail: '',
+    },
+    {
+      key: 'links',
+      label: 'Validating contact links payload',
+      status: 'pending',
+      detail: '',
+    },
+    {
+      key: 'render',
+      label: 'Rendering frontend analysis cards',
+      status: 'pending',
+      detail: '',
+    },
+  ]
+}
+
+function extractCandidateEmail(contactLinks) {
+  if (!Array.isArray(contactLinks)) {
+    return ''
+  }
+
+  const emailLink = contactLinks.find(
+    (link) =>
+      link &&
+      typeof link === 'object' &&
+      (String(link.category || '').toLowerCase() === 'email' || String(link.url || '').includes('@')),
+  )
+
+  if (!emailLink || !emailLink.url) {
+    return ''
+  }
+
+  const rawEmail = String(emailLink.url).replace(/^mailto:/i, '').trim()
+  return rawEmail
+}
 
 function App() {
   const [jdText, setJdText] = useState('')
-  const [resumeText, setResumeText] = useState('')
-  const [strictness, setStrictness] = useState(60)
-  const [criteria, setCriteria] = useState({ ...DEFAULT_CRITERIA })
-  const [mockMode, setMockMode] = useState(true)
+  const [resumeFiles, setResumeFiles] = useState([])
+  const [selectedResumeId, setSelectedResumeId] = useState('')
   const [jdUploadNote, setJdUploadNote] = useState('')
   const [resumeUploadNote, setResumeUploadNote] = useState('')
   const [status, setStatus] = useState('empty')
   const [analysis, setAnalysis] = useState(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [copiedSection, setCopiedSection] = useState('')
+  const [processTrail, setProcessTrail] = useState(createProcessTrail())
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteStatus, setInviteStatus] = useState('idle')
+  const [inviteMessage, setInviteMessage] = useState('')
+  const [interviewDate, setInterviewDate] = useState('')
+  const [interviewTime, setInterviewTime] = useState('')
+
+  const selectedResume = resumeFiles.find((item) => item.id === selectedResumeId) || null
+  const selectedResumeLabel = selectedResume
+    ? `${selectedResume.file.name} (${Math.max(1, Math.round(selectedResume.file.size / 1024))} KB)`
+    : ''
+
+  const updateProcessStep = (stepKey, nextStatus, detail = '') => {
+    setProcessTrail((currentTrail) =>
+      currentTrail.map((step) =>
+        step.key === stepKey ? { ...step, status: nextStatus, detail } : step,
+      ),
+    )
+  }
 
   const handleReset = () => {
+    logDebug('Reset clicked.')
     setJdText('')
-    setResumeText('')
-    setStrictness(60)
-    setCriteria({ ...DEFAULT_CRITERIA })
+    setResumeFiles([])
+    setSelectedResumeId('')
     setJdUploadNote('')
     setResumeUploadNote('')
     setStatus('empty')
     setAnalysis(null)
     setErrorMessage('')
     setCopiedSection('')
-  }
-
-  const handleLoadSample = () => {
-    setJdText(SAMPLE_JD)
-    setResumeText(SAMPLE_RESUME)
-    setJdUploadNote('Sample JD loaded.')
-    setResumeUploadNote('Sample resume loaded.')
-    setStatus('empty')
-    setAnalysis(null)
-    setErrorMessage('')
-    setCopiedSection('')
+    setProcessTrail(createProcessTrail())
+    setInviteEmail('')
+    setInviteStatus('idle')
+    setInviteMessage('')
+    setInterviewDate('')
+    setInterviewTime('')
   }
 
   const handleJdFileUpload = async (event) => {
@@ -48,6 +145,7 @@ function App() {
     if (!file) {
       return
     }
+    logDebug('JD file selected.', { name: file.name, size: file.size, type: file.type })
 
     const fileName = file.name.toLowerCase()
     if (!fileName.endsWith('.txt')) {
@@ -60,7 +158,8 @@ function App() {
       const text = await file.text()
       setJdText(text)
       setJdUploadNote(`Loaded ${file.name}`)
-    } catch {
+    } catch (error) {
+      logError('JD file read failed.', error)
       setJdUploadNote('Could not read file. Please paste JD text.')
     } finally {
       event.target.value = ''
@@ -68,54 +167,98 @@ function App() {
   }
 
   const handleResumeFileUpload = async (event) => {
-    const file = event.target.files?.[0]
-    if (!file) {
-      return
-    }
-
-    const fileName = file.name.toLowerCase()
-    const isTxt = fileName.endsWith('.txt')
-    const isDocOrPdf =
-      fileName.endsWith('.pdf') || fileName.endsWith('.doc') || fileName.endsWith('.docx')
-
-    if (isTxt) {
-      try {
-        const text = await file.text()
-        setResumeText(text)
-        setResumeUploadNote(`Loaded ${file.name}`)
-      } catch {
-        setResumeUploadNote('Could not read file. Please paste resume text.')
-      } finally {
-        event.target.value = ''
-      }
-      return
-    }
-
-    if (isDocOrPdf) {
-      setResumeUploadNote('Parsing not implemented. Paste resume text for best results.')
-      event.target.value = ''
-      return
-    }
-
-    setResumeUploadNote('Unsupported file type. Use .txt upload or paste resume text.')
+    handleResumeDrop(Array.from(event.target.files || []))
     event.target.value = ''
   }
 
-  const handleToggleCriterion = (criterionKey) => {
-    setCriteria((currentCriteria) => ({
-      ...currentCriteria,
-      [criterionKey]: !currentCriteria[criterionKey],
-    }))
+  const handleResumeDrop = (incomingFiles) => {
+    if (!incomingFiles || incomingFiles.length === 0) {
+      return
+    }
+
+    const pdfFiles = incomingFiles.filter((file) => file.name.toLowerCase().endsWith('.pdf'))
+    const ignoredCount = incomingFiles.length - pdfFiles.length
+
+    if (pdfFiles.length === 0) {
+      setResumeUploadNote('Only PDF files are allowed.')
+      return
+    }
+
+    logDebug('Resume PDF files selected.', {
+      totalSelected: incomingFiles.length,
+      pdfAccepted: pdfFiles.length,
+      ignored: ignoredCount,
+      names: pdfFiles.map((file) => file.name),
+    })
+
+    let nextFiles = []
+    let addedCount = 0
+    let firstAddedId = ''
+
+    setResumeFiles((currentFiles) => {
+      const existingIds = new Set(currentFiles.map((item) => item.id))
+      const additions = []
+
+      pdfFiles.forEach((file) => {
+        const id = buildResumeId(file)
+        if (!existingIds.has(id)) {
+          additions.push({
+            id,
+            label: `${file.name} (${Math.max(1, Math.round(file.size / 1024))} KB)`,
+            file,
+          })
+          existingIds.add(id)
+        }
+      })
+
+      addedCount = additions.length
+      firstAddedId = additions[0]?.id || ''
+      nextFiles = [...currentFiles, ...additions]
+      return nextFiles
+    })
+
+    setSelectedResumeId((currentId) => {
+      if (currentId && nextFiles.some((item) => item.id === currentId)) {
+        return currentId
+      }
+      return firstAddedId || nextFiles[0]?.id || ''
+    })
+
+    const noteParts = [`Added ${addedCount} PDF file(s).`]
+    if (ignoredCount > 0) {
+      noteParts.push(`Ignored ${ignoredCount} non-PDF file(s).`)
+    }
+    if (addedCount < pdfFiles.length) {
+      noteParts.push('Duplicate files were skipped.')
+    }
+    setResumeUploadNote(noteParts.join(' '))
+  }
+
+  const handleRemoveSelectedResume = () => {
+    if (!selectedResumeId) {
+      return
+    }
+
+    logDebug('Removing selected resume.', { selectedResumeId })
+    setResumeFiles((currentFiles) => {
+      const filtered = currentFiles.filter((item) => item.id !== selectedResumeId)
+      const nextSelected = filtered[0]?.id || ''
+      setSelectedResumeId(nextSelected)
+      setResumeUploadNote(filtered.length > 0 ? 'Selected resume removed.' : 'All resumes removed.')
+      return filtered
+    })
   }
 
   const copyText = async (value, sectionKey) => {
     try {
       await navigator.clipboard.writeText(value)
+      logDebug('Copied to clipboard.', { section: sectionKey })
       setCopiedSection(sectionKey)
       setTimeout(() => {
         setCopiedSection('')
       }, 1500)
-    } catch {
+    } catch (error) {
+      logError('Clipboard copy failed.', { section: sectionKey, error })
       setCopiedSection(`failed-${sectionKey}`)
       setTimeout(() => {
         setCopiedSection('')
@@ -124,77 +267,168 @@ function App() {
   }
 
   const analyzeCandidate = async () => {
+    logDebug('Analyze triggered.', {
+      jdChars: jdText.length,
+      selectedResumeId,
+      selectedResumeName: selectedResume?.file?.name || null,
+      totalResumeFiles: resumeFiles.length,
+    })
+
     if (!jdText.trim()) {
+      logError('Analyze blocked: missing job description.')
       setStatus('error')
       setErrorMessage('Job Description text is required before analysis.')
       return
     }
 
-    if (!resumeText.trim()) {
+    if (!selectedResume) {
+      logError('Analyze blocked: resume PDF must be selected.')
       setStatus('error')
-      setErrorMessage('Resume text is required before analysis.')
+      setErrorMessage('Please upload and select a resume PDF before analysis.')
       return
     }
 
     setStatus('loading')
     setErrorMessage('')
     setCopiedSection('')
-
-    const payload = {
-      jd_text: jdText,
-      resume_text: resumeText,
-      strictness,
-      criteria: {
-        must_have_skills: criteria.must_have_skills,
-        relevant_experience: criteria.relevant_experience,
-        education_alignment: criteria.education_alignment,
-        location_availability: criteria.location_availability,
-      },
-      meta: {
-        source: 'recruit-ai-frontend',
-        ts: new Date().toISOString(),
-      },
-    }
+    setInviteStatus('idle')
+    setInviteMessage('')
+    setProcessTrail(
+      createProcessTrail().map((step, index) =>
+        index === 0 ? { ...step, status: 'active', detail: 'Preparing upload payload' } : step,
+      ),
+    )
 
     try {
-      let rawResponse = null
+      const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL
+      if (!webhookUrl) {
+        throw new Error(
+          'Missing VITE_N8N_WEBHOOK_URL. Add it to your .env file and restart the dev server.',
+        )
+      }
 
-      if (mockMode) {
-        // Mock mode keeps demos stable when webhook or LLM is unavailable.
-        await new Promise((resolve) => setTimeout(resolve, 800))
-        rawResponse = MOCK_RESPONSE
-      } else {
-        const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL
-        if (!webhookUrl) {
-          throw new Error(
-            'Missing VITE_N8N_WEBHOOK_URL. Add it to your .env file and restart the dev server.',
+      const formData = new FormData()
+      formData.append('resume', selectedResume.file)
+      formData.append('job_description', jdText)
+      formData.append('meta', JSON.stringify({ source: 'recruit-ai-frontend', ts: new Date().toISOString() }))
+
+      logDebug('Sending request to n8n webhook.', {
+        webhookUrl,
+        resumeFileName: selectedResume.file.name,
+        jdChars: jdText.length,
+      })
+
+      const responsePromise = fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'ngrok-skip-browser-warning': '69420',
+        },
+        body: formData,
+      })
+      updateProcessStep('request', 'done', 'Request accepted by gateway')
+      updateProcessStep('workflow', 'active', 'Waiting for n8n execution response')
+
+      const response = await responsePromise
+
+      const responseContentType = response.headers.get('content-type') || ''
+      const responseText = await response.text()
+      logDebug('Received webhook response.', {
+        status: response.status,
+        contentType: responseContentType,
+        bodyPreview: responseText.slice(0, 300),
+      })
+
+      if (!response.ok) {
+        const errorDetails = responseText.trim().slice(0, 300)
+        throw new Error(
+          `Webhook request failed with status ${response.status}.${errorDetails ? ` ${errorDetails}` : ''}`,
+        )
+      }
+
+      updateProcessStep('workflow', 'done', `Response received (HTTP ${response.status})`)
+
+      if (!responseText.trim()) {
+        throw new Error(
+          'Webhook returned an empty response body. Check n8n execution logs for failed nodes or rate limits.',
+        )
+      }
+
+      const looksLikeJson =
+        responseText.trim().startsWith('{') || responseText.trim().startsWith('[')
+      if (!responseContentType.includes('application/json') && !looksLikeJson) {
+        throw new Error(
+          `Webhook response must be JSON. Received content-type "${responseContentType || 'unknown'}".`,
+        )
+      }
+
+      updateProcessStep('profile', 'active', 'Checking score, verdict, and strengths payload')
+
+      let rawResponse = null
+      try {
+        rawResponse = JSON.parse(responseText)
+      } catch {
+        throw new Error(
+          `Webhook returned invalid JSON. Body preview: ${responseText.slice(0, 160)}`,
+        )
+      }
+
+      logDebug('Raw webhook response parsed.', rawResponse)
+      const profileExists =
+        rawResponse &&
+        ((typeof rawResponse.candidate_profile === 'object' && rawResponse.candidate_profile) ||
+          rawResponse.score !== undefined)
+      if (!profileExists) {
+        throw new Error('Backend response missing candidate profile fields.')
+      }
+      updateProcessStep('profile', 'done', 'Candidate profile payload validated')
+
+      updateProcessStep('links', 'active', 'Inspecting contact links payload')
+      const linksCount = Array.isArray(rawResponse.contact_links)
+        ? rawResponse.contact_links.length
+        : 0
+      updateProcessStep(
+        'links',
+        'done',
+        linksCount > 0 ? `Validated ${linksCount} contact link(s)` : 'No contact links returned',
+      )
+
+      updateProcessStep('render', 'active', 'Building UI output cards')
+      const validatedResponse = validateAnalysisResponse(rawResponse)
+      logDebug('Validated response ready for UI.', validatedResponse)
+      setAnalysis(validatedResponse)
+      setStatus('success')
+      updateProcessStep('render', 'done', 'Analysis rendered')
+
+      const parsedEmail = extractCandidateEmail(validatedResponse.contact_links)
+      if (parsedEmail) {
+        setInviteEmail(parsedEmail)
+      }
+    } catch (error) {
+      logError('Analyze request failed.', error)
+      setProcessTrail((currentTrail) => {
+        const activeStepIndex = currentTrail.findIndex((step) => step.status === 'active')
+        if (activeStepIndex === -1) {
+          return currentTrail.map((step, index) =>
+            index === 1
+              ? {
+                  ...step,
+                  status: 'error',
+                  detail: error instanceof Error ? error.message : 'Unexpected processing error',
+                }
+              : step,
           )
         }
 
-        const response = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        })
-
-        if (!response.ok) {
-          throw new Error(`Webhook request failed with status ${response.status}.`)
-        }
-
-        const responseContentType = response.headers.get('content-type') || ''
-        if (!responseContentType.includes('application/json')) {
-          throw new Error('Webhook response must be JSON.')
-        }
-
-        rawResponse = await response.json()
-      }
-
-      const validatedResponse = validateAnalysisResponse(rawResponse)
-      setAnalysis(validatedResponse)
-      setStatus('success')
-    } catch (error) {
+        return currentTrail.map((step, index) =>
+          index === activeStepIndex
+            ? {
+                ...step,
+                status: 'error',
+                detail: error instanceof Error ? error.message : 'Unexpected processing error',
+              }
+            : step,
+        )
+      })
       setStatus('error')
       setAnalysis(null)
       if (error instanceof Error) {
@@ -205,33 +439,156 @@ function App() {
     }
   }
 
+  const sendInterviewInvite = async () => {
+    if (!analysis) {
+      setInviteStatus('error')
+      setInviteMessage('Run Analyze Candidate first to generate strengths.')
+      return
+    }
+
+    if (!inviteEmail.trim()) {
+      setInviteStatus('error')
+      setInviteMessage('Candidate email is required to create draft.')
+      return
+    }
+
+    if (!interviewDate) {
+      setInviteStatus('error')
+      setInviteMessage('Please select an interview date before creating draft.')
+      return
+    }
+
+    if (!interviewTime) {
+      setInviteStatus('error')
+      setInviteMessage('Please select an interview time before creating draft.')
+      return
+    }
+
+    if (!Array.isArray(analysis.strengths) || analysis.strengths.length === 0) {
+      setInviteStatus('error')
+      setInviteMessage('No strengths found in analysis payload.')
+      return
+    }
+
+    setInviteStatus('sending')
+    setInviteMessage('Sending to n8n send-invite webhook...')
+
+    try {
+      const evaluateUrl = import.meta.env.VITE_N8N_WEBHOOK_URL || ''
+      const inviteUrlFromEval = evaluateUrl.includes('/evaluate')
+        ? evaluateUrl.replace('/evaluate', '/send-invite')
+        : ''
+      const inviteWebhookUrl = import.meta.env.VITE_N8N_INVITE_WEBHOOK_URL || inviteUrlFromEval
+
+      if (!inviteWebhookUrl) {
+        throw new Error(
+          'Missing invite webhook URL. Set VITE_N8N_INVITE_WEBHOOK_URL in .env or make VITE_N8N_WEBHOOK_URL end with /evaluate.',
+        )
+      }
+
+      const payload = {
+        candidate_email: inviteEmail.trim(),
+        strengths: analysis.strengths,
+        selected_date: interviewDate,
+        selected_time: interviewTime,
+      }
+
+      logDebug('Sending invite draft request.', {
+        inviteWebhookUrl,
+        candidateEmail: payload.candidate_email,
+        strengthsCount: payload.strengths.length,
+        selectedDate: payload.selected_date,
+        selectedTime: payload.selected_time,
+      })
+
+      const response = await fetch(inviteWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': '69420',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const responseText = await response.text()
+      const responseContentType = response.headers.get('content-type') || ''
+
+      logDebug('Invite webhook response received.', {
+        status: response.status,
+        contentType: responseContentType,
+        bodyPreview: responseText.slice(0, 300),
+      })
+
+      if (!response.ok) {
+        throw new Error(
+          `Invite webhook failed with status ${response.status}. ${responseText.slice(0, 200)}`,
+        )
+      }
+
+      let parsedResponse = null
+      if (responseText.trim()) {
+        try {
+          parsedResponse = JSON.parse(responseText)
+        } catch {
+          parsedResponse = null
+        }
+      }
+
+      const successMessage =
+        parsedResponse && typeof parsedResponse.message === 'string'
+          ? parsedResponse.message
+          : 'Interview draft created successfully.'
+
+      setInviteStatus('success')
+      setInviteMessage(successMessage)
+    } catch (error) {
+      logError('Invite draft request failed.', error)
+      setInviteStatus('error')
+      if (error instanceof Error) {
+        setInviteMessage(error.message)
+      } else {
+        setInviteMessage('Unexpected error while creating interview draft.')
+      }
+    }
+  }
+
   return (
     <div className="relative min-h-screen overflow-x-hidden text-slate-900">
-      <div className="pointer-events-none absolute -left-24 top-4 h-64 w-64 rounded-full bg-sky-300/50 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-20 h-72 w-72 rounded-full bg-indigo-300/45 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-cyan-200/60 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 top-4 h-64 w-64 rounded-full bg-amber-300/50 blur-3xl" />
+      <div className="pointer-events-none absolute right-0 top-20 h-72 w-72 rounded-full bg-orange-300/40 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-rose-200/50 blur-3xl" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <TopBar mockMode={mockMode} onToggleMockMode={() => setMockMode((value) => !value)} />
+        <TopBar />
 
         <main className="grid gap-6 lg:grid-cols-2">
           <InputPanel
             jdText={jdText}
-            resumeText={resumeText}
-            strictness={strictness}
-            criteria={criteria}
             jdUploadNote={jdUploadNote}
             resumeUploadNote={resumeUploadNote}
+            resumeFiles={resumeFiles}
+            selectedResumeId={selectedResumeId}
+            selectedResumeLabel={selectedResumeLabel}
             isLoading={status === 'loading'}
             onJdTextChange={setJdText}
-            onResumeTextChange={setResumeText}
-            onStrictnessChange={setStrictness}
-            onToggleCriterion={handleToggleCriterion}
             onJdFileUpload={handleJdFileUpload}
             onResumeFileUpload={handleResumeFileUpload}
+            onResumeDrop={handleResumeDrop}
+            onSelectedResumeChange={setSelectedResumeId}
+            onRemoveSelectedResume={handleRemoveSelectedResume}
             onAnalyze={analyzeCandidate}
             onReset={handleReset}
-            onLoadSample={handleLoadSample}
+            inviteEmail={inviteEmail}
+            inviteStatus={inviteStatus}
+            inviteMessage={inviteMessage}
+            strengthsCount={Array.isArray(analysis?.strengths) ? analysis.strengths.length : 0}
+            inviteEnabled={Boolean(analysis)}
+            onInviteEmailChange={setInviteEmail}
+            interviewDate={interviewDate}
+            interviewTime={interviewTime}
+            onInterviewDateChange={setInterviewDate}
+            onInterviewTimeChange={setInterviewTime}
+            onSendInvite={sendInterviewInvite}
           />
 
           <OutputPanel
@@ -239,14 +596,11 @@ function App() {
             analysis={analysis}
             errorMessage={errorMessage}
             copiedSection={copiedSection}
+            processTrail={processTrail}
             onRetry={analyzeCandidate}
             onCopyText={copyText}
           />
         </main>
-
-        <section className="mt-6">
-          <Carousel />
-        </section>
       </div>
     </div>
   )
