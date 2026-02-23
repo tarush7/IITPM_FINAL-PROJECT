@@ -42,14 +42,18 @@ function TopBar() {
   }, [displayText, isDeleting, lineIndex])
 
   return (
-    <header className="glass-panel mb-6 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <header className="glass-panel mb-4 flex flex-col gap-3 p-3 sm:mb-6 sm:gap-4 sm:p-4 md:p-5 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-xl font-extrabold tracking-[0.18em] text-slate-900">RECRUIT-AI</h1>
-        <p className="mt-1 text-xs text-slate-600">Agentic resume screening and scheduling copilot</p>
+        <h1 className="text-lg font-extrabold tracking-[0.12em] text-slate-900 sm:text-xl sm:tracking-[0.18em]">
+          RECRUIT-AI
+        </h1>
+        <p className="mt-1 text-xs leading-relaxed text-slate-600">
+          Agentic resume screening and scheduling copilot
+        </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-        <p className="typing-pill">
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end sm:gap-3">
+        <p className="typing-pill w-full sm:w-auto">
           {displayText}
           <span className="typing-cursor">|</span>
         </p>

@@ -3,11 +3,19 @@
 
 :root {
   font-family: "Manrope", "Segoe UI", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
   background:
     radial-gradient(1200px 700px at -10% -20%, rgba(251, 191, 36, 0.35), transparent 60%),
     radial-gradient(1000px 580px at 110% 0%, rgba(249, 115, 22, 0.28), transparent 64%),
@@ -46,6 +54,16 @@ body {
   font-size: 0.875rem;
   color: #1e293b;
   outline: none;
+}
+
+textarea.glass-input {
+  min-height: 7.5rem;
+}
+
+input.glass-input,
+select.glass-input,
+textarea.glass-input {
+  min-height: 2.75rem;
 }
 
 .glass-input::placeholder {
@@ -110,6 +128,10 @@ body {
   color: #ffffff;
   box-shadow: 0 12px 24px rgba(234, 88, 12, 0.24);
   transition: transform 160ms ease, box-shadow 160ms ease;
+  min-height: 2.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-primary:hover {
@@ -126,6 +148,10 @@ body {
   font-weight: 600;
   color: #334155;
   transition: background 160ms ease;
+  min-height: 2.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-secondary:hover {
@@ -140,6 +166,10 @@ body {
   font-weight: 600;
   color: #c2410c;
   transition: background 160ms ease;
+  min-height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-ghost:hover {
@@ -184,4 +214,42 @@ body {
 
 .slide-enter {
   animation: slide-enter 220ms ease;
+}
+
+@media (max-width: 640px) {
+  body {
+    background:
+      radial-gradient(700px 460px at -20% -12%, rgba(251, 191, 36, 0.32), transparent 58%),
+      radial-gradient(640px 420px at 120% 0%, rgba(249, 115, 22, 0.24), transparent 62%),
+      radial-gradient(620px 380px at 50% 116%, rgba(251, 146, 60, 0.22), transparent 66%),
+      linear-gradient(180deg, #fff7ed 0%, #fffaf5 100%);
+  }
+
+  .glass-panel {
+    border-radius: 0.9rem;
+    box-shadow:
+      0 14px 30px rgba(15, 23, 42, 0.09),
+      inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  }
+
+  .glass-soft {
+    border-radius: 0.75rem;
+  }
+
+  .glass-input {
+    font-size: 0.875rem;
+    padding: 0.68rem 0.72rem;
+  }
+
+  .typing-pill {
+    min-width: 0;
+    width: 100%;
+    font-size: 0.74rem;
+    padding: 0.32rem 0.68rem;
+  }
+
+  .status-pill {
+    font-size: 0.68rem;
+    padding: 0.3rem 0.62rem;
+  }
 }

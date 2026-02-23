@@ -53,8 +53,8 @@ function InputPanel({
   }
 
   return (
-    <section className="glass-panel p-5">
-      <h2 className="mb-4 text-lg font-bold text-slate-900">Inputs</h2>
+    <section className="glass-panel p-4 sm:p-5">
+      <h2 className="mb-3 text-base font-bold text-slate-900 sm:mb-4 sm:text-lg">Inputs</h2>
 
       <div className="mb-6">
         <label htmlFor="jdText" className="mb-2 block text-sm font-semibold text-slate-700">
@@ -66,10 +66,10 @@ function InputPanel({
           onChange={(event) => onJdTextChange(event.target.value)}
           rows={8}
           placeholder="Paste the full job description..."
-          className="glass-input"
+          className="glass-input leading-relaxed"
         />
 
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-2 sm:items-center">
           <label className="glass-chip cursor-pointer">
             Upload .txt
             <input
@@ -81,7 +81,7 @@ function InputPanel({
           </label>
           <span className="text-xs text-slate-500">{jdText.length} chars</span>
         </div>
-        {jdUploadNote && <p className="mt-2 text-xs text-slate-600">{jdUploadNote}</p>}
+        {jdUploadNote && <p className="mt-2 break-words text-xs text-slate-600">{jdUploadNote}</p>}
       </div>
 
       <div className="mb-6">
@@ -95,13 +95,15 @@ function InputPanel({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <div className="text-2xl">☁</div>
-          <p className="mt-1 text-base font-semibold text-slate-800">Choose PDF or drag and drop</p>
-          <p className="mt-1 text-sm text-slate-500">PDF format only, up to 50MB each</p>
+          <div className="text-xl sm:text-2xl">☁</div>
+          <p className="mt-1 text-sm font-semibold text-slate-800 sm:text-base">
+            Choose PDF or drag and drop
+          </p>
+          <p className="mt-1 text-xs text-slate-500 sm:text-sm">PDF format only, up to 50MB each</p>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="btn-secondary mt-4"
+            className="btn-secondary mt-4 w-full sm:w-auto"
           >
             Browse PDF
           </button>
@@ -131,30 +133,38 @@ function InputPanel({
         </select>
 
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {selectedResumeId && (
-              <button type="button" onClick={onRemoveSelectedResume} className="btn-ghost text-xs">
+              <button
+                type="button"
+                onClick={onRemoveSelectedResume}
+                className="btn-ghost w-full text-xs sm:w-auto"
+              >
                 Remove selected
               </button>
             )}
             <span className="text-xs text-slate-500">{resumeFiles.length} file(s)</span>
           </div>
         </div>
-        {selectedResumeLabel && <p className="m-2 text-xs font-medium text-slate-700">Selected: {selectedResumeLabel}</p>}
-        {resumeUploadNote && <p className="m-2 text-xs text-slate-600">{resumeUploadNote}</p>}
+        {selectedResumeLabel && (
+          <p className="mt-2 break-words text-xs font-medium text-slate-700">
+            Selected: {selectedResumeLabel}
+          </p>
+        )}
+        {resumeUploadNote && <p className="mt-2 break-words text-xs text-slate-600">{resumeUploadNote}</p>}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-1 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
         <button
           type="button"
           onClick={onAnalyze}
           disabled={isLoading}
-          className="btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-primary w-full sm:min-w-[11rem] sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? 'Analyzing...' : 'Analyze Candidate'}
         </button>
 
-        <button type="button" onClick={onReset} className="btn-secondary">
+        <button type="button" onClick={onReset} className="btn-secondary w-full sm:w-auto">
           Reset
         </button>
       </div>
@@ -165,7 +175,7 @@ function InputPanel({
         }`}
       >
         <h3 className="text-sm font-semibold text-slate-800">Send Interview Draft</h3>
-        <p className="mt-1 text-xs text-slate-600">
+        <p className="mt-1 text-xs leading-relaxed text-slate-600">
           Uses n8n `send-invite` webhook with selected candidate strengths.
         </p>
 
@@ -214,13 +224,13 @@ function InputPanel({
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="mt-3 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-slate-500">{strengthsCount} strength item(s) will be sent</p>
           <button
             type="button"
             onClick={onSendInvite}
             disabled={!inviteEnabled || inviteStatus === 'sending'}
-            className="btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary w-full sm:min-w-[8.75rem] sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
           >
             {inviteStatus === 'sending' ? 'Sending...' : 'Create Draft'}
           </button>
@@ -234,7 +244,7 @@ function InputPanel({
 
         {inviteMessage && (
           <p
-            className={`mt-3 text-xs ${
+            className={`mt-3 break-words text-xs ${
               inviteStatus === 'error'
                 ? 'text-rose-700'
                 : inviteStatus === 'success'

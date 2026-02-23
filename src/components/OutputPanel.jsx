@@ -16,7 +16,7 @@ function CopyButton({ sectionKey, copiedSection, onCopy }) {
   }
 
   return (
-    <button type="button" onClick={onCopy} className="btn-secondary !px-2.5 !py-1 text-xs">
+    <button type="button" onClick={onCopy} className="btn-secondary !px-3 !py-1.5 text-xs">
       {label}
     </button>
   )
@@ -36,8 +36,8 @@ function LoadingTrail({ processTrail }) {
   const steps = processTrail && processTrail.length > 0 ? processTrail : []
 
   return (
-    <div className="glass-soft p-4">
-      <div className="mb-3 flex items-center gap-3 text-sm font-medium text-orange-800">
+    <div className="glass-soft p-3 sm:p-4">
+      <div className="mb-3 flex items-center gap-2 sm:gap-3 text-xs font-medium text-orange-800 sm:text-sm">
         <span className="h-5 w-5 animate-spin rounded-full border-2 border-orange-300 border-t-orange-800" />
         Analyzing...
       </div>
@@ -46,7 +46,7 @@ function LoadingTrail({ processTrail }) {
         Backend Process Trace
       </p>
 
-      <ul className="space-y-1.5 text-sm">
+      <ul className="space-y-1.5 text-xs sm:text-sm">
         {steps.map((step, index) => {
           const styleClass =
             step.status === 'done'
@@ -58,7 +58,7 @@ function LoadingTrail({ processTrail }) {
                   : 'bg-white/50 text-slate-500'
 
           return (
-            <li key={step.key} className={`rounded-lg px-2.5 py-1.5 transition ${styleClass}`}>
+            <li key={step.key} className={`rounded-lg px-2 py-1.5 sm:px-2.5 transition ${styleClass}`}>
               <p>
                 {index + 1}. {step.label}
               </p>
@@ -73,7 +73,7 @@ function LoadingTrail({ processTrail }) {
 
 function SectionCard({ title, children }) {
   return (
-    <div className="glass-soft border border-slate-300/70 p-4">
+    <div className="glass-soft border border-slate-300/70 p-3 sm:p-4">
       <h3 className="mb-2 text-sm font-semibold text-slate-800">{title}</h3>
       {children}
     </div>
@@ -90,11 +90,11 @@ function OutputPanel({
   onCopyText,
 }) {
   return (
-    <section className="glass-panel p-5">
-      <h2 className="mb-4 text-lg font-bold text-slate-900">AI Analysis</h2>
+    <section className="glass-panel p-4 sm:p-5">
+      <h2 className="mb-3 text-base font-bold text-slate-900 sm:mb-4 sm:text-lg">AI Analysis</h2>
 
       {status === 'empty' && (
-        <div className="glass-soft rounded-xl border border-dashed border-slate-300/60 p-6 text-sm text-slate-600">
+        <div className="glass-soft rounded-xl border border-dashed border-slate-300/60 p-4 text-sm text-slate-600 sm:p-6">
           Add a job description, upload resume PDF(s), choose one from the dropdown, and click
           Analyze Candidate.
         </div>
@@ -105,10 +105,10 @@ function OutputPanel({
       )}
 
       {status === 'error' && (
-        <div className="glass-soft space-y-3 border border-rose-200/70 bg-rose-50/70 p-4">
-          <p className="text-sm text-rose-700">{errorMessage}</p>
+        <div className="glass-soft space-y-3 border border-rose-200/70 bg-rose-50/70 p-3 sm:p-4">
+          <p className="break-words text-sm text-rose-700">{errorMessage}</p>
           <LoadingTrail processTrail={processTrail} />
-          <button type="button" onClick={onRetry} className="btn-secondary text-xs">
+          <button type="button" onClick={onRetry} className="btn-secondary w-full text-xs sm:w-auto">
             Try again
           </button>
         </div>
@@ -117,8 +117,8 @@ function OutputPanel({
       {status === 'success' && analysis && (
         <div className="space-y-5">
           <SectionCard title="Fit Score">
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-4xl font-extrabold text-slate-900">{analysis.score}</p>
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <p className="text-3xl font-extrabold text-slate-900 sm:text-4xl">{analysis.score}</p>
               <span
                 className={`rounded-full border px-3 py-1 text-xs font-bold ${recommendationStyles[analysis.recommendation]}`}
               >
@@ -165,8 +165,11 @@ function OutputPanel({
             <SectionCard title="Contact Links">
               <ul className="space-y-2 text-sm text-slate-700">
                 {analysis.contact_links.map((link, index) => (
-                  <li key={`${link.url}-${index}`} className="rounded-lg border border-white/70 bg-white/55 p-2.5">
-                    <p className="font-semibold text-slate-800">{link.category}</p>
+                  <li
+                    key={`${link.url}-${index}`}
+                    className="rounded-lg border border-white/70 bg-white/55 p-2.5 sm:p-3"
+                  >
+                    <p className="break-words font-semibold text-slate-800">{link.category}</p>
                     {link.url.includes('@') ? (
                       <a
                         href={`mailto:${link.url}`}
@@ -192,8 +195,8 @@ function OutputPanel({
           )}
 
           {analysis.email_draft && (
-            <div className="glass-soft p-4">
-              <div className="mb-2 flex items-center justify-between">
+            <div className="glass-soft p-3 sm:p-4">
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-sm font-semibold text-slate-800">Email Draft</h3>
                 <CopyButton
                   sectionKey="email"
@@ -204,15 +207,15 @@ function OutputPanel({
               <textarea
                 readOnly
                 value={analysis.email_draft}
-                rows={6}
+                rows={7}
                 className="glass-input text-sm text-slate-700"
               />
             </div>
           )}
 
           {analysis.calendar_payload && (
-            <div className="glass-soft p-4">
-              <div className="mb-2 flex items-center justify-between">
+            <div className="glass-soft p-3 sm:p-4">
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-sm font-semibold text-slate-800">Scheduling Payload</h3>
                 <CopyButton
                   sectionKey="calendar"

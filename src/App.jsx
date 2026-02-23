@@ -558,10 +558,10 @@ function App() {
       <div className="pointer-events-none absolute right-0 top-20 h-72 w-72 rounded-full bg-orange-300/40 blur-3xl" />
       <div className="pointer-events-none absolute bottom-10 left-1/3 h-56 w-56 rounded-full bg-rose-200/50 blur-3xl" />
 
-      <div className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
         <TopBar />
 
-        <main className="grid gap-6 lg:grid-cols-2">
+        <main className="grid gap-4 sm:gap-6 lg:grid-cols-2">
           <InputPanel
             jdText={jdText}
             jdUploadNote={jdUploadNote}
