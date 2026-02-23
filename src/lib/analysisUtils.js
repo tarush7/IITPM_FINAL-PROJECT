@@ -39,6 +39,50 @@ function mapVerdictToRecommendation(value) {
   return 'REJECT'
 }
 
+function extractWorkflowNote(rawData) {
+  if (!rawData || typeof rawData !== 'object') {
+    return ''
+  }
+
+  if (typeof rawData.workflow_note === 'string' && rawData.workflow_note.trim()) {
+    return rawData.workflow_note.trim()
+  }
+
+  if (typeof rawData.workflow_context === 'string' && rawData.workflow_context.trim()) {
+    return rawData.workflow_context.trim()
+  }
+
+  if (rawData.workflow_context && typeof rawData.workflow_context === 'object') {
+    const context = rawData.workflow_context
+    const message = String(context.message || '').trim()
+    const branch = String(context.branch || '').trim()
+    const reason = String(context.reason || '').trim()
+    const parts = []
+    if (message) {
+      parts.push(message)
+    }
+    if (branch) {
+      parts.push(`branch: ${branch}`)
+    }
+    if (reason) {
+      parts.push(`reason: ${reason}`)
+    }
+    if (parts.length > 0) {
+      return parts.join(' | ')
+    }
+  }
+
+  if (rawData.if_branch !== undefined && rawData.if_branch !== null) {
+    return `Workflow IF branch: ${String(rawData.if_branch)}`
+  }
+
+  if (rawData.branch !== undefined && rawData.branch !== null) {
+    return `Workflow branch: ${String(rawData.branch)}`
+  }
+
+  return ''
+}
+
 function parseCandidateProfileShape(rawData) {
   const profile = rawData.candidate_profile
   if (!profile || typeof profile !== 'object') {
@@ -70,6 +114,56 @@ function parseCandidateProfileShape(rawData) {
     email_draft: rawData.email_draft ? String(rawData.email_draft) : '',
     calendar_payload: rawData.calendar_payload && typeof rawData.calendar_payload === 'object' ? rawData.calendar_payload : null,
     contact_links: normalizeContactLinks(rawData.contact_links),
+    workflow_note: extractWorkflowNote(rawData),
+  }
+}
+
+function parseJudgeOutputShape(rawData) {
+  const output = rawData.output
+  if (!output || typeof output !== 'object') {
+    return null
+  }
+
+  if (
+    output.fit_score === undefined &&
+    output.verdict === undefined &&
+    output.screening_decision === undefined
+  ) {
+    return null
+  }
+
+  const parsedScore = Number(output.fit_score)
+  if (Number.isNaN(parsedScore)) {
+    throw new Error('Response field "output.fit_score" must be a number.')
+  }
+
+  const verdict = String(output.verdict || output.screening_decision || '').toUpperCase()
+  if (!verdict) {
+    throw new Error('Response field "output.verdict" is required.')
+  }
+
+  const strengths = normalizeArrayField(output.strengths || [], 'output.strengths')
+  const gaps = normalizeArrayField(output.gaps || [], 'output.gaps')
+  const interviewQuestions = normalizeArrayField(
+    output.interview_questions || [],
+    'output.interview_questions',
+  )
+  const screeningDecision = String(output.screening_decision || verdict)
+  const workflowNote =
+    extractWorkflowNote(rawData) || 'URL enrichment step was skipped by workflow (IF false branch).'
+
+  return {
+    score: Math.min(100, Math.max(0, Math.round(parsedScore))),
+    recommendation: mapVerdictToRecommendation(verdict),
+    summary: `Verdict: ${verdict}.`,
+    strengths,
+    gaps,
+    interview_questions: interviewQuestions,
+    recommended_action: `Screening decision: ${screeningDecision}`,
+    email_draft: rawData.email_draft ? String(rawData.email_draft) : '',
+    calendar_payload: rawData.calendar_payload && typeof rawData.calendar_payload === 'object' ? rawData.calendar_payload : null,
+    contact_links: normalizeContactLinks(rawData.contact_links),
+    workflow_note: workflowNote,
   }
 }
 
@@ -82,6 +176,11 @@ export function validateAnalysisResponse(rawData) {
   const parsedCandidateProfileShape = parseCandidateProfileShape(rawData)
   if (parsedCandidateProfileShape) {
     return parsedCandidateProfileShape
+  }
+
+  const parsedJudgeOutputShape = parseJudgeOutputShape(rawData)
+  if (parsedJudgeOutputShape) {
+    return parsedJudgeOutputShape
   }
 
   const requiredFields = [
@@ -138,5 +237,6 @@ export function validateAnalysisResponse(rawData) {
     email_draft: rawData.email_draft ? String(rawData.email_draft) : '',
     calendar_payload: rawData.calendar_payload || null,
     contact_links: normalizeContactLinks(rawData.contact_links),
+    workflow_note: extractWorkflowNote(rawData),
   }
 }

@@ -373,27 +373,31 @@ function App() {
       }
 
       logDebug('Raw webhook response parsed.', rawResponse)
-      const profileExists =
-        rawResponse &&
-        ((typeof rawResponse.candidate_profile === 'object' && rawResponse.candidate_profile) ||
-          rawResponse.score !== undefined)
-      if (!profileExists) {
-        throw new Error('Backend response missing candidate profile fields.')
-      }
+      const validatedResponse = validateAnalysisResponse(rawResponse)
       updateProcessStep('profile', 'done', 'Candidate profile payload validated')
 
       updateProcessStep('links', 'active', 'Inspecting contact links payload')
-      const linksCount = Array.isArray(rawResponse.contact_links)
-        ? rawResponse.contact_links.length
+      const linksCount = Array.isArray(validatedResponse.contact_links)
+        ? validatedResponse.contact_links.length
         : 0
+      const workflowNoteText =
+        typeof validatedResponse.workflow_note === 'string'
+          ? validatedResponse.workflow_note.toLowerCase()
+          : ''
+      const workflowSkippedUrls =
+        workflowNoteText.includes('skip') || workflowNoteText.includes('false branch')
+
       updateProcessStep(
         'links',
         'done',
-        linksCount > 0 ? `Validated ${linksCount} contact link(s)` : 'No contact links returned',
+        linksCount > 0
+          ? `Validated ${linksCount} contact link(s)`
+          : workflowSkippedUrls
+            ? 'URL extraction skipped by workflow branch'
+            : 'No contact links returned',
       )
 
       updateProcessStep('render', 'active', 'Building UI output cards')
-      const validatedResponse = validateAnalysisResponse(rawResponse)
       logDebug('Validated response ready for UI.', validatedResponse)
       setAnalysis(validatedResponse)
       setStatus('success')

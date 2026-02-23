@@ -131,6 +131,12 @@ function OutputPanel({
             <p className="text-sm text-slate-700">{analysis.summary}</p>
           </SectionCard>
 
+          {analysis.workflow_note && (
+            <SectionCard title="Workflow Context">
+              <p className="break-words text-sm text-slate-700">{analysis.workflow_note}</p>
+            </SectionCard>
+          )}
+
           <SectionCard title="Strengths">
             <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
               {analysis.strengths.map((item, index) => (
