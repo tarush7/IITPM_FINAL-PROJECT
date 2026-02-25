@@ -1,0 +1,3 @@
+[[edge_functions]]
+path = "/n8n-webhook/*"
+function = "proxy"

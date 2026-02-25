@@ -1,22 +1,36 @@
 export default async (request, context) => {
-  const tunnelBase = Deno.env.get("N8N_TUNNEL_URL"); 
-  
+  const tunnelBase =
+    (typeof Netlify !== 'undefined' && Netlify.env.get('N8N_TUNNEL_URL')) ||
+    Deno.env.get('N8N_TUNNEL_URL')
+
   if (!tunnelBase) {
-    return new Response("N8N_TUNNEL_URL environment variable is missing", { status: 500 });
+    return new Response('N8N_TUNNEL_URL environment variable is missing', { status: 500 })
   }
-// Strip the local proxy path and append the actual webhook path
-const targetUrl = tunnelBase + new URL(request.url).pathname.replace('/n8n-webhook', '');
 
-// Clone headers and explicitly inject the Ngrok bypass header
-const proxyHeaders = new Headers(request.headers);
-proxyHeaders.set('ngrok-skip-browser-warning', 'true');
+  const incomingUrl = new URL(request.url)
+  const upstreamPath = incomingUrl.pathname.replace('/n8n-webhook', '')
+  const targetUrl = new URL(`${upstreamPath}${incomingUrl.search}`, tunnelBase).toString()
 
-return fetch(targetUrl, {
-method: request.method,
-headers: proxyHeaders,
-body: request.body,
-});
-};
+  const proxyHeaders = new Headers(request.headers)
+  proxyHeaders.set('ngrok-skip-browser-warning', 'true')
 
-// Bind this function to the local proxy route
-export const config = { path: "/n8n-webhook/*" };
+  const init = {
+    method: request.method,
+    headers: proxyHeaders,
+  }
+
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    init.body = request.body
+  }
+
+  try {
+    return await fetch(targetUrl, init)
+  } catch (error) {
+    return new Response(
+      `Proxy request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      { status: 502 },
+    )
+  }
+}
+
+export const config = { path: '/n8n-webhook/*' }
