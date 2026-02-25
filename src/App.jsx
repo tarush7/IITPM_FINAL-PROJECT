@@ -334,9 +334,6 @@ function App() {
 
       const responsePromise = fetch(webhookUrl, {
         method: 'POST',
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-        },
         body: formData,
       })
       updateProcessStep('request', 'done', 'Request accepted by gateway')
@@ -528,7 +525,6 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify(payload),
       })
