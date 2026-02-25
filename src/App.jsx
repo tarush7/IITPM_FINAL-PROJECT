@@ -71,6 +71,17 @@ function createProcessTrail() {
   ]
 }
 
+const NETLIFY_FUNCTION_EVALUATE_PATH = '/.netlify/functions/evaluate'
+const NETLIFY_FUNCTION_INVITE_PATH = '/.netlify/functions/send-invite'
+
+function resolveWebhookUrl(directUrl, proxyPath) {
+  const useNetlifyProxy = import.meta.env.VITE_USE_NETLIFY_PROXY === 'true'
+  if (useNetlifyProxy) {
+    return proxyPath
+  }
+  return (directUrl || '').trim()
+}
+
 function extractCandidateEmail(contactLinks) {
   if (!Array.isArray(contactLinks)) {
     return ''
@@ -300,10 +311,13 @@ function App() {
     )
 
     try {
-      const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL
+      const webhookUrl = resolveWebhookUrl(
+        import.meta.env.VITE_N8N_WEBHOOK_URL,
+        NETLIFY_FUNCTION_EVALUATE_PATH,
+      )
       if (!webhookUrl) {
         throw new Error(
-          'Missing VITE_N8N_WEBHOOK_URL. Add it to your .env file and restart the dev server.',
+          'Missing webhook URL. Set VITE_N8N_WEBHOOK_URL or set VITE_USE_NETLIFY_PROXY=true.',
         )
       }
 
@@ -320,6 +334,9 @@ function App() {
 
       const responsePromise = fetch(webhookUrl, {
         method: 'POST',
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
         body: formData,
       })
       updateProcessStep('request', 'done', 'Request accepted by gateway')
@@ -475,15 +492,20 @@ function App() {
     setInviteMessage('Sending to n8n send-invite webhook...')
 
     try {
-      const evaluateUrl = import.meta.env.VITE_N8N_WEBHOOK_URL || ''
+      const evaluateUrl = resolveWebhookUrl(
+        import.meta.env.VITE_N8N_WEBHOOK_URL,
+        NETLIFY_FUNCTION_EVALUATE_PATH,
+      )
       const inviteUrlFromEval = evaluateUrl.includes('/evaluate')
         ? evaluateUrl.replace('/evaluate', '/send-invite')
         : ''
-      const inviteWebhookUrl = import.meta.env.VITE_N8N_INVITE_WEBHOOK_URL || inviteUrlFromEval
+      const inviteWebhookUrl =
+        resolveWebhookUrl(import.meta.env.VITE_N8N_INVITE_WEBHOOK_URL, NETLIFY_FUNCTION_INVITE_PATH) ||
+        inviteUrlFromEval
 
       if (!inviteWebhookUrl) {
         throw new Error(
-          'Missing invite webhook URL. Set VITE_N8N_INVITE_WEBHOOK_URL in .env or make VITE_N8N_WEBHOOK_URL end with /evaluate.',
+          'Missing invite webhook URL. Set VITE_N8N_INVITE_WEBHOOK_URL or set VITE_USE_NETLIFY_PROXY=true.',
         )
       }
 
@@ -506,6 +528,7 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify(payload),
       })
