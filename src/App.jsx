@@ -71,15 +71,15 @@ function createProcessTrail() {
   ]
 }
 
-const NETLIFY_FUNCTION_EVALUATE_PATH = '/.netlify/functions/evaluate'
-const NETLIFY_FUNCTION_INVITE_PATH = '/.netlify/functions/send-invite'
+const N8N_PROXY_EVALUATE_PATH = '/n8n-webhook/webhook/evaluate'
+const N8N_PROXY_INVITE_PATH = '/n8n-webhook/webhook/send-invite'
 
 function resolveWebhookUrl(directUrl, proxyPath) {
-  const useNetlifyProxy = import.meta.env.VITE_USE_NETLIFY_PROXY === 'true'
-  if (useNetlifyProxy) {
-    return proxyPath
+  const configured = (directUrl || '').trim()
+  if (configured.startsWith('/')) {
+    return configured
   }
-  return (directUrl || '').trim()
+  return proxyPath
 }
 
 function extractCandidateEmail(contactLinks) {
@@ -311,13 +311,10 @@ function App() {
     )
 
     try {
-      const webhookUrl = resolveWebhookUrl(
-        import.meta.env.VITE_N8N_WEBHOOK_URL,
-        NETLIFY_FUNCTION_EVALUATE_PATH,
-      )
+      const webhookUrl = resolveWebhookUrl(import.meta.env.VITE_N8N_WEBHOOK_URL, N8N_PROXY_EVALUATE_PATH)
       if (!webhookUrl) {
         throw new Error(
-          'Missing webhook URL. Set VITE_N8N_WEBHOOK_URL or set VITE_USE_NETLIFY_PROXY=true.',
+          'Missing webhook URL. Set VITE_N8N_WEBHOOK_URL to a same-origin path like /n8n-webhook/webhook/evaluate.',
         )
       }
 
@@ -489,20 +486,17 @@ function App() {
     setInviteMessage('Sending to n8n send-invite webhook...')
 
     try {
-      const evaluateUrl = resolveWebhookUrl(
-        import.meta.env.VITE_N8N_WEBHOOK_URL,
-        NETLIFY_FUNCTION_EVALUATE_PATH,
-      )
+      const evaluateUrl = resolveWebhookUrl(import.meta.env.VITE_N8N_WEBHOOK_URL, N8N_PROXY_EVALUATE_PATH)
       const inviteUrlFromEval = evaluateUrl.includes('/evaluate')
         ? evaluateUrl.replace('/evaluate', '/send-invite')
         : ''
       const inviteWebhookUrl =
-        resolveWebhookUrl(import.meta.env.VITE_N8N_INVITE_WEBHOOK_URL, NETLIFY_FUNCTION_INVITE_PATH) ||
+        resolveWebhookUrl(import.meta.env.VITE_N8N_INVITE_WEBHOOK_URL, N8N_PROXY_INVITE_PATH) ||
         inviteUrlFromEval
 
       if (!inviteWebhookUrl) {
         throw new Error(
-          'Missing invite webhook URL. Set VITE_N8N_INVITE_WEBHOOK_URL or set VITE_USE_NETLIFY_PROXY=true.',
+          'Missing invite webhook URL. Set VITE_N8N_INVITE_WEBHOOK_URL to a same-origin path like /n8n-webhook/webhook/send-invite.',
         )
       }
 
