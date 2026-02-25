@@ -14,9 +14,11 @@ export default async (request, context) => {
   const proxyHeaders = new Headers(request.headers)
   proxyHeaders.set('ngrok-skip-browser-warning', 'true')
 
+  // We must define duplex: 'half' to prevent mobile streams from hanging
   const init = {
     method: request.method,
     headers: proxyHeaders,
+    duplex: 'half', 
   }
 
   if (request.method !== 'GET' && request.method !== 'HEAD') {
