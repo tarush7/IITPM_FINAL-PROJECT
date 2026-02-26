@@ -76,8 +76,8 @@ const N8N_PROXY_INVITE_PATH = '/n8n-webhook/webhook/send-invite'
 
 function resolveWebhookUrl(directUrl, proxyPath) {
   const configured = (directUrl || '').trim()
-  if (configured.startsWith('/')) {
-    return configured
+  if (configured) {
+    return configured // Accept full https:// URLs!
   }
   return proxyPath
 }
